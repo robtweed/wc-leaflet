@@ -47,7 +47,7 @@ export function load() {
     renderMap(lat, long, zoom) {
       let _this = this;
       let fn = function() {
-        let map = _this.leaflet.map(_this.rootElement.id).setView([lat, long], zoom);
+        _this.map = _this.leaflet.map(_this.rootElement.id).setView([lat, long], zoom);
         _this.leaflet.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
           attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
           maxZoom: 18,
@@ -55,7 +55,7 @@ export function load() {
           tileSize: 512,
           zoomOffset: -1,
           accessToken: _this.accessToken
-        }).addTo(map);
+        }).addTo(_this.map);
       }
       if (this.ready) {
          fn();
@@ -65,8 +65,81 @@ export function load() {
       }
     }
 
+    setMarker(lat, long) {
+      if (this.map) {
+        return this.leaflet.marker([lat, long]).addTo(this.map);
+      }
+    }
+
+    setCircle(lat, long, params) {
+      if (this.map) {
+
+        /*
+          Example params:
+
+          {
+            color: 'red',
+            fillColor: '#f03',
+            fillOpacity: 0.5,
+            radius: 500
+          }
+        */
+
+        return this.leaflet.circle([lat, long], params).addTo(this.map);
+      }
+    }
+
+    setPolygon(params) {
+      if (this.map) {
+
+        /*
+          Example params:
+
+          [
+            [51.509, -0.08],
+            [51.503, -0.06],
+            [51.51, -0.047]
+          ]
+        */
+
+        return this.leaflet.polygon(params).addTo(this.map);
+      }
+    }
+
+    addPopup(text, obj, open) {
+      if (obj) {
+        if (open) {
+          obj.bindPopup(text).openPopup();
+        }
+        else {
+          obj.bindPopup(text);
+        }
+      }
+    }
+
+    setPopupAsLayer(lat, long, content) {
+      if (this.map) {
+        return this.leaflet.popup()
+        .setLatLng([lat, long])
+        .setContent(content)
+        .openOn(this.map);
+      }
+    }
+
+    addEventHandler(fn, type) {
+      type = type || 'click';
+      this.map.on(type, fn);
+      this.mapEvents.push({
+        type: type,
+        fn: fn
+      });
+    }
+
     onReady(fn) {
       document.addEventListener('mapReady', fn);
+      this.removeOnReady = function() {
+        document.removeEventListener('mapReady', fn);
+      }
     }
 
     isReady() {
@@ -81,10 +154,18 @@ export function load() {
       this.rootElement = this.getElementsByTagName('div')[0];
       this.childrenTarget = this.rootElement;
       this.name = componentName + '-' + count;
+      this.mapEvents = [];
     }
 
     disconnectedCallback() {
       if (this.onUnload) this.onUnload();
+      let _this = this;
+      this.mapEvents.forEach(function(evnt) {
+        _this.map.off(evnt.type, evnt.fn);
+      });
+      if (this.removeOnReady) {
+        this.removeOnReady();
+      }
     }
 
   });
