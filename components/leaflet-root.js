@@ -44,7 +44,7 @@ export function load() {
       });
     }
 
-    renderMap(lat, long, zoom) {
+    renderMapCB(lat, long, zoom, callback) {
       let _this = this;
       let fn = function() {
         _this.map = _this.leaflet.map(_this.rootElement.id).setView([lat, long], zoom);
@@ -56,6 +56,7 @@ export function load() {
           zoomOffset: -1,
           accessToken: _this.accessToken
         }).addTo(_this.map);
+        if (callback) callback.call(_this);
       }
       if (this.ready) {
          fn();
@@ -63,6 +64,19 @@ export function load() {
       else {
         this.onReady(fn);
       }
+    }
+
+    renderMapPromise(lat, long, zoom) {
+      let _this = this;
+      return new Promise((resolve) => {
+        _this.renderMapCB(lat, long, zoom, function() {
+          resolve();
+        });
+      });
+    }
+
+    async renderMap(lat, long, zoom) {
+      return await this.renderMapPromise(lat, long, zoom);
     }
 
     setMarker(lat, long) {
